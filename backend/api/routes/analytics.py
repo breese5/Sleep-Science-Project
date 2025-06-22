@@ -7,8 +7,11 @@ from typing import List, Optional, Dict, Any
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
+from sqlalchemy import func, distinct
 
 from backend.core.logging import get_logger
+from backend.database.connection import db_manager
+from backend.database.models import Interaction, User
 from backend.models.analytics import AnalyticsService
 
 router = APIRouter()
@@ -66,17 +69,35 @@ async def get_analytics_overview(
     """
     logger.info("Analytics overview requested", days=days)
     
+    db_session = db_manager.get_session()
     try:
-        stats = await analytics_service.get_overall_statistics(days=days)
+        end_date = datetime.utcnow()
+        start_date = end_date - timedelta(days=days)
+
+        # Base query for the time period
+        query = db_session.query(Interaction).filter(Interaction.timestamp.between(start_date, end_date))
+
+        total_interactions = query.count()
+        
+        # Since user_id is not fully implemented in the Interaction model yet,
+        # we'll count unique conversations as a proxy for users for now.
+        unique_users = query.with_entities(func.count(distinct(Interaction.conversation_id))).scalar()
+        
+        avg_message_length = query.with_entities(func.avg(Interaction.message_length)).scalar()
+
+        # Since topic is hardcoded, we'll create a placeholder for top_topics
+        top_topics = []
+        if total_interactions > 0:
+            top_topics.append({"topic": "sleep_science", "count": total_interactions})
         
         return AnalyticsOverview(
-            total_interactions=stats["total_interactions"],
-            unique_users=stats["unique_users"],
-            avg_message_length=stats["avg_message_length"],
-            top_topics=stats["top_topics"],
-            period_days=stats["period_days"],
-            period_start=stats["period_start"],
-            period_end=stats["period_end"]
+            total_interactions=total_interactions or 0,
+            unique_users=unique_users or 0,
+            avg_message_length=round(avg_message_length, 2) if avg_message_length else 0.0,
+            top_topics=top_topics,
+            period_days=days,
+            period_start=start_date,
+            period_end=end_date
         )
         
     except Exception as e:
@@ -85,6 +106,8 @@ async def get_analytics_overview(
             status_code=500,
             detail="Failed to retrieve analytics overview"
         )
+    finally:
+        db_session.close()
 
 
 @router.get("/analytics/topics", response_model=List[TopicAnalytics])

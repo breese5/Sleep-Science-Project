@@ -40,7 +40,13 @@ class ChatBot(LoggerMixin):
         self.conversations: Dict[str, Dict[str, Any]] = {}
         
         # System prompt for sleep science expertise
-        self.system_prompt = self._get_system_prompt()
+        self.system_prompt = (
+            "You are the Sleep Science Explainer Bot. Your goal is to interpret, summarize, and explain "
+            "sleep-related academic papers and guidelines in a clear, accessible way. Prioritize accuracy, "
+            "cite sources where possible, and present information without jargon. "
+            "Provide a 1-sentence executive summary at the top of each answer. "
+            "Remember: You are an educational tool, not a replacement for professional medical advice."
+        )
         
         self.logger.info("ChatBot initialized successfully")
     

@@ -4,6 +4,7 @@ Chat endpoints for the Sleep Science Explainer Bot.
 
 from datetime import datetime
 from typing import List, Optional, Dict, Any
+import uuid
 
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
@@ -11,7 +12,8 @@ from pydantic import BaseModel, Field
 from backend.core.logging import get_logger
 from backend.core.config import settings
 from backend.models.chat import ChatBot
-from backend.models.analytics import AnalyticsService
+from backend.database.connection import db_manager
+from backend.database.models import Interaction, Conversation, User
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -51,7 +53,6 @@ class ConversationHistory(BaseModel):
 
 # Initialize services (these will be properly initialized later)
 chat_bot = ChatBot()
-analytics_service = AnalyticsService()
 
 
 @router.post("/chat", response_model=ChatResponse)
@@ -62,49 +63,76 @@ async def chat_with_bot(request: ChatRequest) -> ChatResponse:
     This endpoint processes user messages and returns AI-generated responses
     about sleep science topics, research papers, and health guidelines.
     """
+    conversation_id = request.conversation_id or str(uuid.uuid4())
+    user_id = request.user_id or "anonymous-user"
+
     logger.info(
         "Chat request received",
-        conversation_id=request.conversation_id,
-        user_id=request.user_id,
+        conversation_id=conversation_id,
+        user_id=user_id,
         message_length=len(request.message)
     )
     
+    db_session = db_manager.get_session()
     try:
+        # Ensure user exists
+        user = db_session.query(User).filter_by(id=user_id).first()
+        if not user:
+            user = User(id=user_id)
+            db_session.add(user)
+            db_session.commit()
+
+        # Ensure conversation exists
+        conversation = db_session.query(Conversation).filter_by(id=conversation_id).first()
+        if not conversation:
+            conversation = Conversation(id=conversation_id, user_id=user_id)
+            db_session.add(conversation)
+            db_session.commit()
+
         # Generate response using the chat bot
+        start_time = datetime.utcnow()
         response_data = await chat_bot.generate_response(
             message=request.message,
-            conversation_id=request.conversation_id,
+            conversation_id=conversation_id,
             context=request.context
         )
+        end_time = datetime.utcnow()
+        processing_time = (end_time - start_time).total_seconds()
         
-        # Log analytics
-        if request.user_id:
-            await analytics_service.log_interaction(
-                user_id=request.user_id,
-                conversation_id=response_data["conversation_id"],
-                message=request.message,
-                response=response_data["response"],
-                topic="sleep_science"  # TODO: Extract topic from message
-            )
+        # Log analytics interaction
+        interaction = Interaction(
+            conversation_id=conversation_id,
+            message=request.message,
+            response=response_data["response"],
+            message_length=len(request.message),
+            response_length=len(response_data["response"]),
+            additional_data={"processing_time_seconds": processing_time},
+            topic="sleep_science"  # Placeholder topic
+        )
+        db_session.add(interaction)
+        db_session.commit()
         
         return ChatResponse(
             response=response_data["response"],
-            conversation_id=response_data["conversation_id"],
+            conversation_id=conversation_id,
             timestamp=datetime.utcnow(),
             sources=response_data.get("sources"),
             confidence=response_data.get("confidence")
         )
         
     except Exception as e:
+        db_session.rollback()
         logger.error(
             "Error generating chat response",
             error=str(e),
-            conversation_id=request.conversation_id
+            conversation_id=conversation_id
         )
         raise HTTPException(
             status_code=500,
             detail="Failed to generate response. Please try again."
         )
+    finally:
+        db_session.close()
 
 
 @router.get("/chat/conversation/{conversation_id}", response_model=ConversationHistory)
