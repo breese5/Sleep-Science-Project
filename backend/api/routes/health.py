@@ -42,8 +42,8 @@ async def health_check() -> HealthResponse:
     return HealthResponse(
         status="healthy",
         timestamp=datetime.utcnow(),
-        version=settings.APP_VERSION,
-        environment=settings.ENVIRONMENT,
+        version=settings.app_version,
+        environment=settings.environment,
         uptime=0.0  # TODO: Implement actual uptime tracking
     )
 
@@ -73,8 +73,8 @@ async def detailed_health_check() -> DetailedHealthResponse:
     return DetailedHealthResponse(
         status=overall_status,
         timestamp=datetime.utcnow(),
-        version=settings.APP_VERSION,
-        environment=settings.ENVIRONMENT,
+        version=settings.app_version,
+        environment=settings.environment,
         uptime=0.0,  # TODO: Implement actual uptime tracking
         services=services
     )

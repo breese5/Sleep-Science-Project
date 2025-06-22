@@ -14,7 +14,7 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from backend.api.routes import analytics, chat, health, papers
+from backend.api.routes import analytics, chat, health, papers, monitoring
 from backend.core.config import settings
 from backend.core.logging import get_logger, setup_logging
 from backend.core.middleware import RequestLoggingMiddleware
@@ -74,10 +74,11 @@ def create_app() -> FastAPI:
         app.add_middleware(RateLimitMiddleware)
         
         # Include routers
-        app.include_router(health.router, prefix=settings.api_prefix, tags=["Health"])
+        app.include_router(health.router, tags=["Health"])
         app.include_router(chat.router, prefix=settings.api_prefix, tags=["Chat"])
         app.include_router(papers.router, prefix=settings.api_prefix, tags=["Papers"])
         app.include_router(analytics.router, prefix=settings.api_prefix, tags=["Analytics"])
+        app.include_router(monitoring.router, prefix=settings.api_prefix, tags=["Monitoring"])
         
     except ImportError as e:
         logger.warning(f"Some routes could not be loaded: {e}")
