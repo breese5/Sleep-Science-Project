@@ -307,6 +307,10 @@ npm run build
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
+## ⚖️ Disclaimer
+
+This is not meant to be medical advice and is made for educational purposes only. Consult with a doctor for further questions.
+
 ## 🆘 Support
 
 ### Documentation
