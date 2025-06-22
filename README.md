@@ -123,6 +123,21 @@ psql -U postgres -c "CREATE DATABASE sleep_science_bot;"
 4. Add credentials to `.env` file
 
 ### 5. Run the Application
+
+#### Option A: Using main.py (Recommended)
+```bash
+# Check dependencies and environment
+python main.py check
+
+# Start both backend and frontend servers
+python main.py both
+
+# Or start services individually
+python main.py start      # Backend only
+python main.py frontend   # Frontend only
+```
+
+#### Option B: Manual Start
 ```bash
 # Terminal 1: Backend
 python app.py
@@ -134,11 +149,26 @@ npm start
 
 Visit http://localhost:3000 to use the application!
 
+### 6. Testing and Development
+```bash
+# Run tests
+python main.py test
+
+# Generate coverage report
+python main.py coverage
+
+# View coverage report
+open htmlcov/index.html  # macOS
+# or
+start htmlcov/index.html # Windows
+```
+
 ## 📁 Project Structure
 
 ```
 SleepScience/
-├── app.py                      # Main FastAPI application
+├── main.py                     # Main entry point (NEW!)
+├── app.py                      # FastAPI application
 ├── requirements.txt            # Python dependencies
 ├── env.example                 # Environment variables template
 ├── alembic.ini                # Database migration config
@@ -453,6 +483,91 @@ GET /api/v1/analytics/export?format=json&days=30
 - **Swagger UI**: http://localhost:8000/docs
 - **ReDoc**: http://localhost:8000/redoc
 
+## 🎮 Application Management with main.py
+
+The `main.py` script provides a unified interface for managing the Sleep Science Bot application. It handles dependency checking, environment validation, and service management.
+
+### Available Commands
+
+#### Service Management
+```bash
+# Start both backend and frontend servers
+python main.py both
+
+# Start backend server only
+python main.py start
+
+# Start frontend server only
+python main.py frontend
+```
+
+#### Development Tools
+```bash
+# Run the test suite
+python main.py test
+
+# Generate test coverage report
+python main.py coverage
+
+# Check dependencies and environment
+python main.py check
+```
+
+#### Help and Information
+```bash
+# Show help information
+python main.py help
+```
+
+### Command Details
+
+#### `python main.py both`
+- Starts both backend (FastAPI) and frontend (React) servers
+- Backend runs on http://localhost:8000
+- Frontend runs on http://localhost:3000
+- Automatically checks dependencies and environment first
+
+#### `python main.py start`
+- Starts only the backend server
+- Useful for API development and testing
+- Includes health checks and dependency validation
+
+#### `python main.py frontend`
+- Starts only the React frontend
+- Assumes backend is already running
+- Opens browser automatically
+
+#### `python main.py test`
+- Runs the complete test suite
+- Includes health, chat, analytics, and recommendations tests
+- Provides verbose output with test results
+
+#### `python main.py coverage`
+- Generates comprehensive test coverage report
+- Creates HTML report in `htmlcov/` directory
+- Shows coverage statistics in terminal
+
+#### `python main.py check`
+- Validates Python version (3.9+ required)
+- Checks for required dependencies
+- Verifies environment configuration
+- Validates frontend dependencies
+
+### Development Workflow
+```bash
+# 1. Initial setup
+python main.py check
+
+# 2. Start development servers
+python main.py both
+
+# 3. Run tests during development
+python main.py test
+
+# 4. Generate coverage for quality assurance
+python main.py coverage
+```
+
 ## 🗄️ Database Schema
 
 ### Core Tables
@@ -480,13 +595,189 @@ GET /api/v1/analytics/export?format=json&days=30
 
 ## 🚀 Deployment
 
-### Development
+### Quick Start Checklist
+
+#### ✅ Prerequisites
+- [ ] Python 3.9+ installed
+- [ ] Node.js 18+ installed
+- [ ] PostgreSQL database (local or cloud)
+- [ ] AWS Account with Bedrock access
+- [ ] Git repository cloned
+
+#### ✅ Setup Steps
+- [ ] Virtual environment created and activated
+- [ ] Backend dependencies installed (`pip install -r requirements.txt`)
+- [ ] Frontend dependencies installed (`cd frontend && npm install`)
+- [ ] Environment file configured (`cp env.example .env`)
+- [ ] Database created and accessible
+- [ ] AWS credentials configured
+
+### Development Deployment
+
+#### Using main.py (Recommended)
 ```bash
-# Backend
+# Check system readiness
+python main.py check
+
+# Start both servers
+python main.py both
+
+# Run tests
+python main.py test
+
+# Generate coverage report
+python main.py coverage
+```
+
+#### Manual Development
+```bash
+# Backend only
 python app.py
 
-# Frontend
+# Frontend only
 cd frontend && npm start
+
+# Tests
+pytest tests/ -v
+
+# Coverage
+pytest --cov=backend --cov-report=html tests/
+```
+
+### Production Deployment
+
+#### Environment Configuration
+
+Required environment variables:
+```bash
+DATABASE_URL=postgresql://user:pass@host:port/db
+AWS_ACCESS_KEY_ID=your_aws_key
+AWS_SECRET_ACCESS_KEY=your_aws_secret
+AWS_DEFAULT_REGION=us-east-1
+```
+
+#### Database Setup
+
+**Option A: Local PostgreSQL**
+```bash
+brew install postgresql  # macOS
+brew services start postgresql
+psql -U postgres -c "CREATE DATABASE sleep_science_bot;"
+```
+
+**Option B: Cloud Database (Recommended)**
+- **Neon**: Free tier with 3GB storage
+- **Supabase**: Free tier with 500MB
+- **Railway**: Free tier with 1GB
+
+#### AWS Bedrock Setup
+
+1. **Request Access**: Go to [AWS Bedrock Console](https://console.aws.amazon.com/bedrock/)
+2. **Model Access**: Request Claude 3 Sonnet access
+3. **IAM User**: Create user with Bedrock permissions
+4. **Credentials**: Add to `.env` file
+
+#### Deployment Options
+
+**Option A: Traditional VPS**
+```bash
+# Install dependencies
+sudo apt update
+sudo apt install python3 python3-pip nodejs npm postgresql
+
+# Deploy application
+git clone <repository>
+cd SleepScience
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+cd frontend && npm install && npm run build
+```
+
+**Option B: Container Deployment**
+```dockerfile
+# Dockerfile example
+FROM python:3.9-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+COPY . .
+EXPOSE 8000
+CMD ["python", "app.py"]
+```
+
+**Option C: Cloud Platforms**
+- **Heroku**: Easy deployment with PostgreSQL addon
+- **Railway**: Full-stack deployment platform
+- **Vercel**: Frontend deployment with API routes
+
+### Performance Monitoring
+
+#### Key Metrics to Monitor
+- Response time < 2 seconds
+- Database connection pool usage
+- Memory usage < 512MB
+- CPU usage < 80%
+- Error rate < 1%
+
+#### Monitoring Commands
+```bash
+# Check system resources
+curl http://localhost:8000/api/v1/monitoring/metrics
+
+# View recent logs
+curl http://localhost:8000/api/v1/monitoring/logs?limit=20
+
+# Health check
+curl http://localhost:8000/health
+```
+
+### Troubleshooting
+
+#### Common Issues
+
+**Backend Won't Start**
+```bash
+# Check dependencies
+python main.py check
+
+# Check environment
+cat .env
+
+# Check database connection
+python -c "from backend.database.connection import db_manager; db_manager.create_tables()"
+```
+
+**Frontend Won't Start**
+```bash
+# Check Node.js version
+node --version
+
+# Reinstall dependencies
+cd frontend
+rm -rf node_modules package-lock.json
+npm install
+```
+
+**Tests Failing**
+```bash
+# Check test environment
+python main.py check
+
+# Run tests with verbose output
+pytest tests/ -v -s
+
+# Check specific test
+pytest tests/test_api.py::test_health_check -v -s
+```
+
+**Database Issues**
+```bash
+# Check connection
+python -c "from backend.database.connection import db_manager; print(db_manager.engine.url)"
+
+# Reset database (development only)
+python -c "from backend.database.connection import db_manager; db_manager.drop_tables(); db_manager.create_tables()"
 ```
 
 ### Production Considerations
@@ -495,6 +786,9 @@ cd frontend && npm start
 - Configure HTTPS and security headers
 - Implement user authentication
 - Set up CI/CD pipeline
+- Regular database backups
+- Keep dependencies updated
+- Monitor application health regularly
 
 ## 🧪 Testing
 
