@@ -10,7 +10,7 @@ import xml.etree.ElementTree as ET
 
 from backend.core.logging import LoggerMixin
 from backend.core.config import settings
-from backend.api.routes.papers import ResearchPaper
+from backend.models.papers import ResearchPaper
 
 
 class NIHClient(LoggerMixin):

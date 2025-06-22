@@ -14,54 +14,51 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from backend.api.routes import analytics, chat, health, papers
 from backend.core.config import settings
-from backend.core.logging import setup_logging
+from backend.core.logging import get_logger, setup_logging
+from backend.core.middleware import RequestLoggingMiddleware
 from backend.database.connection import db_manager
 
 # Setup logging
 setup_logging()
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan manager."""
-    # Startup
     logger.info("Starting Sleep Science Explainer Bot...")
-    logger.info(f"Environment: {settings.ENVIRONMENT}")
-    logger.info(f"Debug mode: {settings.DEBUG}")
+    logger.info(f"Environment: {settings.environment}")
+    logger.info(f"Debug mode: {'on' if settings.debug else 'off'}")
     
-    # Initialize database
-    try:
-        db_manager.create_tables()
-        logger.info("Database tables created successfully")
-    except Exception as e:
-        logger.error(f"Failed to create database tables: {e}")
-        # Continue without database for demo purposes
+    # Connect to database
+    db_manager.create_tables()
     
     yield
     
-    # Shutdown
-    logger.info("Shutting down Sleep Science Explainer Bot...")
+    # Close database connections
     db_manager.close()
+    logger.info("Sleep Science Explainer Bot shut down.")
 
 
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
     
     app = FastAPI(
-        title=settings.APP_NAME,
-        version=settings.APP_VERSION,
-        description="A conversational AI for explaining sleep science research",
-        docs_url="/docs" if settings.DEBUG else None,
-        redoc_url="/redoc" if settings.DEBUG else None,
+        title=settings.app_name,
+        version=settings.app_version,
+        debug=settings.debug,
+        openapi_url=f"{settings.api_prefix}/openapi.json",
+        docs_url=f"{settings.api_prefix}/docs",
+        redoc_url=f"{settings.api_prefix}/redoc",
         lifespan=lifespan
     )
     
     # Add middleware
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.CORS_ORIGINS,
+        allow_origins=settings.cors_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -71,17 +68,16 @@ def create_app() -> FastAPI:
     
     # Import routes after middleware setup
     try:
-        from backend.api.routes import chat, papers, analytics, health
-        from backend.core.middleware import RequestLoggingMiddleware, RateLimitMiddleware
+        from backend.core.middleware import RateLimitMiddleware
         
         app.add_middleware(RequestLoggingMiddleware)
         app.add_middleware(RateLimitMiddleware)
         
         # Include routers
-        app.include_router(health.router, prefix=settings.API_PREFIX, tags=["health"])
-        app.include_router(chat.router, prefix=settings.API_PREFIX, tags=["chat"])
-        app.include_router(papers.router, prefix=settings.API_PREFIX, tags=["papers"])
-        app.include_router(analytics.router, prefix=settings.API_PREFIX, tags=["analytics"])
+        app.include_router(health.router, prefix=settings.api_prefix, tags=["Health"])
+        app.include_router(chat.router, prefix=settings.api_prefix, tags=["Chat"])
+        app.include_router(papers.router, prefix=settings.api_prefix, tags=["Papers"])
+        app.include_router(analytics.router, prefix=settings.api_prefix, tags=["Analytics"])
         
     except ImportError as e:
         logger.warning(f"Some routes could not be loaded: {e}")
@@ -108,8 +104,8 @@ app = create_app()
 if __name__ == "__main__":
     uvicorn.run(
         "app:app",
-        host=settings.API_HOST,
-        port=settings.API_PORT,
-        reload=settings.DEBUG,
-        log_level=settings.LOG_LEVEL.lower()
+        host=settings.api_host,
+        port=settings.api_port,
+        reload=settings.debug,
+        log_level=settings.log_level.lower()
     ) 

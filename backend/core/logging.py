@@ -38,7 +38,7 @@ def setup_logging() -> None:
     logging.basicConfig(
         format="%(message)s",
         stream=sys.stdout,
-        level=getattr(logging, settings.LOG_LEVEL.upper()),
+        level=getattr(logging, settings.log_level.upper()),
     )
     
     # Set specific logger levels

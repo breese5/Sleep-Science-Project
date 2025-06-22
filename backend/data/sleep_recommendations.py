@@ -7,7 +7,6 @@ from typing import List, Optional, Dict, Any
 import json
 
 from backend.core.logging import LoggerMixin
-from backend.api.routes.papers import ResearchPaper
 
 
 class SleepRecommendationsClient(LoggerMixin):

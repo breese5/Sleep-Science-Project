@@ -170,6 +170,9 @@ const ChatInterface = () => {
               <Send size={20} />
             </button>
           </div>
+          <p className="text-xs text-gray-500 mt-2 text-center">
+            This is not meant to be medical advice and is made for educational purposes only. Consult with a doctor for further questions.
+          </p>
         </div>
       </div>
     </div>

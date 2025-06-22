@@ -6,6 +6,7 @@ import uuid
 from datetime import datetime
 from typing import Dict, List, Optional, Any
 import boto3
+import json
 from botocore.exceptions import ClientError
 
 from backend.core.logging import LoggerMixin
@@ -110,13 +111,8 @@ Remember: You are an educational tool, not a replacement for professional medica
                 conversation_id, "user", message
             )
             
-            # Prepare conversation context for AI
-            conversation_context = self._prepare_conversation_context(
-                conversation_id, context
-            )
-            
             # Generate AI response
-            ai_response = await self._generate_ai_response(conversation_context)
+            ai_response = await self._generate_ai_response(conversation_id)
             
             # Add AI response to conversation
             self._add_message_to_conversation(
@@ -138,42 +134,65 @@ Remember: You are an educational tool, not a replacement for professional medica
             )
             raise
     
-    async def _generate_ai_response(self, conversation_context: str) -> Dict[str, Any]:
+    async def _generate_ai_response(self, conversation_id: str) -> Dict[str, Any]:
         """
         Generate response using AWS Bedrock.
         
         Args:
-            conversation_context: The full conversation context
+            conversation_id: The ID of the current conversation.
             
         Returns:
             Dictionary containing AI response data
         """
         try:
-            # Prepare the prompt for Bedrock
-            prompt = f"{self.system_prompt}\n\n{conversation_context}"
-            
+            # Get the message history for the conversation
+            messages = self.conversations.get(conversation_id, {}).get("messages", [])
+
+            # Format messages for the Anthropic Claude 3 model
+            formatted_messages = []
+            for msg in messages:
+                # Skip system messages if they are accidentally stored
+                if msg["role"] != "system":
+                    formatted_messages.append({"role": msg["role"], "content": [{"type": "text", "text": msg["content"]}]})
+
+            # Prepare the request body for Bedrock
+            body = {
+                "anthropic_version": "bedrock-2023-05-31",
+                "max_tokens": settings.bedrock_max_tokens,
+                "temperature": settings.bedrock_temperature,
+                "system": self.system_prompt,
+                "messages": formatted_messages,
+            }
+
             # Call Bedrock API
             response = self.bedrock_client.invoke_model(
                 modelId=settings.bedrock_model_id,
-                body=prompt,
+                body=json.dumps(body),
                 contentType="application/json",
                 accept="application/json"
             )
             
             # Parse response
-            response_body = response['body'].read()
-            # Note: Actual response parsing depends on the specific Bedrock model
-            # This is a simplified example
+            response_body = json.loads(response.get("body").read())
             
+            # Extract the response text
+            response_text = ""
+            for block in response_body.get("content", []):
+                if block.get("type") == "text":
+                    response_text += block.get("text", "")
+
             return {
-                "content": "I understand you're asking about sleep science. Let me help explain that in simple terms...",
-                "sources": [],
-                "confidence": 0.8
+                "content": response_text,
+                "sources": [],  # Placeholder for future implementation
+                "confidence": 0.9  # Placeholder
             }
             
         except ClientError as e:
             self.logger.error(f"AWS Bedrock error: {e}")
-            raise Exception("Failed to generate AI response")
+            raise Exception("Failed to generate AI response due to a client error.")
+        except Exception as e:
+            self.logger.error(f"Error in _generate_ai_response: {e}")
+            raise
     
     def _prepare_conversation_context(
         self,

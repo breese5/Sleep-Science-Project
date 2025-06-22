@@ -2,11 +2,12 @@
 Middleware for the Sleep Science Explainer Bot.
 """
 
-import time
-from typing import Dict, Any
-from fastapi import Request, Response
-from fastapi.middleware.base import BaseHTTPMiddleware
-from starlette.middleware.base import RequestResponseEndpoint
+from time import time
+from typing import Dict, Any, Optional
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
+from starlette.requests import Request
+from starlette.responses import Response
+from starlette.types import ASGIApp
 import structlog
 
 from backend.core.config import settings
@@ -21,7 +22,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
     
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         """Log request details and timing."""
-        start_time = time.time()
+        start_time = time()
         
         # Log request
         self.logger.info(
@@ -36,7 +37,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
         
         # Calculate duration
-        duration = time.time() - start_time
+        duration = time() - start_time
         
         # Log response
         self.logger.info(
@@ -61,7 +62,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         """Apply rate limiting to requests."""
         client_ip = request.client.host if request.client else "unknown"
-        current_time = time.time()
+        current_time = time()
         
         # Clean old entries
         self._cleanup_old_entries(current_time)

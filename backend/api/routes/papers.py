@@ -11,23 +11,10 @@ from pydantic import BaseModel, Field
 from backend.core.logging import get_logger
 from backend.data.nih_client import NIHClient
 from backend.data.sleep_recommendations import SleepRecommendationsClient
+from backend.models.papers import ResearchPaper
 
 router = APIRouter()
 logger = get_logger(__name__)
-
-
-class ResearchPaper(BaseModel):
-    """Research paper model."""
-    id: str
-    title: str
-    authors: List[str]
-    abstract: str
-    journal: str
-    publication_date: datetime
-    doi: Optional[str] = None
-    pmid: Optional[str] = None
-    keywords: List[str] = []
-    source: str = "pubmed"
 
 
 class SleepRecommendation(BaseModel):
