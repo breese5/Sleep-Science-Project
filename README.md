@@ -947,3 +947,7 @@ This is not meant to be medical advice and is made for educational purposes only
 ---
 
 **Built for better sleep science education**
+
+## 🤖 AI Assistance
+
+This project was developed with the assistance of **Cursor**, an AI pair programming tool, to accelerate development, debugging, and documentation.
