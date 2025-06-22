@@ -261,4 +261,3 @@ If you encounter issues:
 3. Verify all environment variables are set correctly
 4. Ensure all services (PostgreSQL, AWS) are accessible
 
-For class demo purposes, the local setup should be sufficient to demonstrate all features. 
