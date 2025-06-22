@@ -11,42 +11,30 @@ const Recommendations = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    const fetchRecommendations = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get('/api/v1/recommendations');
+        setRecommendations(response.data);
+        const uniqueCategories = [...new Set(response.data.map(rec => rec.category))];
+        setCategories(uniqueCategories);
+      } catch (error) {
+        console.error('Error fetching recommendations:', error);
+        setError('Failed to load recommendations. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchRecommendations();
-    fetchCategories();
   }, []);
-
-  const fetchRecommendations = async (category = '', query = '') => {
-    try {
-      setLoading(true);
-      const params = {};
-      if (category) params.category = category;
-      if (query) params.query = query;
-      
-      const response = await axios.get('/api/v1/recommendations', { params });
-      setRecommendations(response.data);
-    } catch (error) {
-      console.error('Error fetching recommendations:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchCategories = async () => {
-    try {
-      const response = await axios.get('/api/v1/recommendations/categories');
-      setCategories(response.data.categories);
-    } catch (error) {
-      console.error('Error fetching categories:', error);
-    }
-  };
 
   const handleCategoryChange = (category) => {
     setSelectedCategory(category);
-    fetchRecommendations(category, searchQuery);
   };
 
   const handleSearch = () => {
-    fetchRecommendations(selectedCategory, searchQuery);
+    // This function is now empty as the filtering is done on the client-side
   };
 
   const getPriorityColor = (priority) => {
@@ -83,7 +71,7 @@ const Recommendations = () => {
       rec.content.toLowerCase().includes(searchQuery.toLowerCase())
     )
     .filter((rec) =>
-      selectedCategory === 'all' ? true : rec.category === selectedCategory
+      selectedCategory === '' || selectedCategory === 'all' ? true : rec.category === selectedCategory
     );
 
   return (
@@ -115,7 +103,7 @@ const Recommendations = () => {
               
               <select
                 value={selectedCategory}
-                onChange={(e) => handleCategoryChange(e.target.value)}
+                onChange={(e) => setSelectedCategory(e.target.value)}
                 className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">All Categories</option>
@@ -141,7 +129,8 @@ const Recommendations = () => {
               </div>
               <button
                 onClick={handleSearch}
-                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+                disabled={true}
+                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors disabled:opacity-50"
               >
                 Search
               </button>
@@ -154,10 +143,10 @@ const Recommendations = () => {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
               <p className="mt-2 text-gray-600">Loading recommendations...</p>
             </div>
-          ) : recommendations.length === 0 ? (
+          ) : filteredRecommendations.length === 0 ? (
             <div className="text-center py-8">
               <BookOpen size={48} className="mx-auto mb-4 text-gray-300" />
-              <p className="text-gray-600">No recommendations found.</p>
+              <p className="text-gray-600">No recommendations match your criteria.</p>
             </div>
           ) : (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
